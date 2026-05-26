@@ -6,6 +6,7 @@
       "Effect": "Allow",
       "Action": [
         "s3:*",
+        "ec2:*",
         "iam:*",
         "kms:*",
         "glue:*",
