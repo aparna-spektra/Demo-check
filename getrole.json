@@ -1,0 +1,307 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "IAMroles",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreatePolicy",
+                "iam:PassRole",
+                "iam:GetRole",
+                "iam:CreateServiceLinkedRole",
+                "iam:GetPolicy",
+                "iam:CreateRole",
+                "iam:AttachRolePolicy",
+                "iam:PutRolePolicy"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceAccount": "${aws:PrincipalAccount}"
+                }
+            }
+        },
+        {
+            "Sid": "AllowPassRoleToEMRServerless",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": [
+                "arn:aws:iam::*:role/service-role/AmazonSageMakerCanvasEMRSExecutionAccess-*",
+                "arn:aws:iam::*:role/AmazonSageMakerCanvasEMRSExecutionAccess-*",
+                "arn:aws:iam::*:role/service-role/AmazonSageMaker-ExecutionRole-*"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "emr-serverless.amazonaws.com",
+                    "aws:ResourceAccount": "${aws:PrincipalAccount}"
+                }
+            }
+        },
+        {
+            "Sid": "Ec2S3SageMakerRestirctedAcess",
+            "Effect": "Allow",
+            "Action": [
+                "sagemaker:ListApps",
+                "sagemaker:CreateUserProfile",
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:DeleteSubnet",
+                "ec2:GetInstanceUefiData",
+                "ec2:CreateKeyPair",
+                "s3:CreateBucket",
+                "sagemaker:ListTrainingJobs",
+                "ec2:GetConsoleScreenshot",
+                "ec2:DeleteRouteTable",
+                "ec2:AssociateRouteTable",
+                "ec2:GetLaunchTemplateData",
+                "ec2:StartInstances",
+                "ec2:CreateRoute",
+                "ec2:DeleteInternetGateway",
+                "s3:DeleteObject",
+                "sagemaker:UpdateDomain",
+                "ec2:Get*",
+                "ec2:ImportKeyPair",
+                "ec2:DescribeSnapshotAttribute",
+                "ec2:CreateTags",
+                "sagemaker:List*",
+                "ec2:CreateRouteTable",
+                "ec2:RunInstances",
+                "ec2:DetachInternetGateway",
+                "s3:PutBucketCORS",
+                "ec2:StopInstances",
+                "ec2:GetReservedInstancesExchangeQuote",
+                "ec2:DescribeVolumeAttribute",
+                "ec2:CreateVolume",
+                "sagemaker:CreatePresignedDomainUrl",
+                "s3:PutObject",
+                "s3:GetObject",
+                "ec2-instance-connect:SendSSHPublicKey",
+                "ec2:GetPasswordData",
+                "ec2:CreateDefaultVpc",
+                "ec2:DescribeImageAttribute",
+                "ec2:DeleteVpc",
+                "sagemaker:ListDomains",
+                "ec2:CreateSubnet",
+                "ec2:DescribeSubnets",
+                "ec2:DeleteKeyPair",
+                "sagemaker:ListUserProfiles",
+                "ec2:DescribeInstanceAttribute",
+                "ec2:CreateVpc",
+                "s3:ListBucket",
+                "ec2:GetConsoleOutput",
+                "ec2:CreateDefaultSubnet",
+                "ec2:CreateSecurityGroup",
+                "s3:GetBucketCors",
+                "sagemaker:ListModelPackageGroups",
+                "sagemaker:ListNotebookInstances",
+                "sagemaker:DescribeUserProfile",
+                "ec2:RebootInstances",
+                "sagemaker:DeleteDomain",
+                "ec2:TerminateInstances",
+                "sagemaker:ListTags",
+                "sagemaker:Describe*",
+                "ec2:DeleteRoute",
+                "iam:ListRoles",
+                "sagemaker:CreateDomain",
+                "ec2:DescribeSecurityGroups",
+                "sagemaker:ListModelPackages",
+                "ec2:Describe*",
+                "s3:ListAllMyBuckets",
+                "ec2:DescribeVpcs",
+                "ec2:DeleteSecurityGroup",
+                "sagemaker:DescribeDomain",
+                "s3:GetBucketCORS",
+                "sagemaker:ListModels",
+                "ec2:GetInstanceTpmEkPub",
+                "s3:GetBucketLocation",
+                "ec2:DescribeCapacityBlockExtensionOfferings",
+                "ec2:AssociateIamInstanceProfile",
+                "sagemaker:ListEndpoints"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "SageMakerCanvasActions",
+            "Effect": "Allow",
+            "Action": [
+                "sagemaker:DescribeTrainingJob",
+                "sagemaker:CreateModel",
+                "sagemaker:CreateEndpoint",
+                "sagemaker:DeleteApp",
+                "sagemaker:DescribeModel",
+                "sagemaker:CreateAutoMLJobV2",
+                "sagemaker:StopTrainingJob",
+                "sagemaker:CreateAutoMLJob",
+                "sagemaker:CreateProcessingJob",
+                "sagemaker:CreateTrainingJob",
+                "sagemaker:DescribeAutoMLJobV2",
+                "sagemaker:DescribeAutoMLJob",
+                "sagemaker:DescribeProcessingJob",
+                "sagemaker:DescribeCompilationJob",
+                "sagemaker:CreateEndpointConfig",
+                "sagemaker:CreateCompilationJob",
+                "sagemaker:DescribeTransformJob",
+                "sagemaker:DescribeEndpointConfig",
+                "sagemaker:DeleteEndpoint",
+                "sagemaker:StopTransformJob",
+                "sagemaker:DescribeEndpoint",
+                "sagemaker:StopAutoMLJob",
+                "sagemaker:AddTags",
+                "sagemaker:CreateTransformJob"
+            ],
+            "Resource": [
+                "arn:aws:sagemaker:*:*:*Canvas*",
+                "arn:aws:sagemaker:*:*:*canvas*",
+                "arn:aws:sagemaker:*:*:*model-compilation-*"
+            ]
+        },
+        {
+            "Sid": "Ec2VolumeAndInstanceRestrictions",
+            "Effect": "Deny",
+            "Action": [
+                "ec2:AttachVolume",
+                "ec2:RunInstances",
+                "ec2:CreateVolume"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "NumericGreaterThan": {
+                    "ec2:VolumeSize": "9"
+                }
+            }
+        },
+        {
+            "Sid": "Ec2VolumeTypeRestriction",
+            "Effect": "Deny",
+            "Action": "ec2:*",
+            "Resource": "*",
+            "Condition": {
+                "ForAnyValue:StringNotEquals": {
+                    "ec2:VolumeType": "gp3"
+                }
+            }
+        },
+        {
+            "Sid": "Ec2Instancetype",
+            "Effect": "Deny",
+            "Action": "ec2:RunInstances",
+            "Resource": "arn:aws:ec2:*:*:instance/*",
+            "Condition": {
+                "StringNotEqualsIfExists": {
+                    "ec2:InstanceType": "t3.micro"
+                }
+            }
+        },
+        {
+            "Sid": "RegionRestriction",
+            "Effect": "Deny",
+            "Action": "ec2:*",
+            "Resource": "*",
+            "Condition": {
+                "StringNotEquals": {
+                    "aws:RequestedRegion": [
+                        "us-east-1",
+                        "us-east-2",
+                        "us-west-2"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "IAMPolicyModificationRestrictions",
+            "Effect": "Deny",
+            "Action": [
+                "iam:PutUserPolicy",
+                "iam:PutRolePolicy",
+                "iam:PutGroupPolicy"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "GroupAssign",
+            "Effect": "Deny",
+            "Action": [
+                "iam:AttachGroupPolicy",
+                "iam:AttachUserPolicy"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "ArnNotLike": {
+                    "iam:PolicyARN": "arn:aws:iam::*:policy/UserCreationRestriction"
+                }
+            }
+        },
+        {
+            "Sid": "DenyDetachManagedPolicies",
+            "Effect": "Deny",
+            "Action": [
+                "iam:DetachRolePolicy",
+                "iam:DetachGroupPolicy",
+                "iam:DetachUserPolicy"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "ArnLike": {
+                    "iam:PolicyARN": "arn:aws:iam::*:policy/AWS*PolicyDefinition"
+                }
+            }
+        },
+        {
+            "Sid": "VisualEditor12",
+            "Effect": "Deny",
+            "Action": [
+                "iam:CreatePolicy",
+                "iam:DeleteRolePolicy",
+                "iam:DeleteUserPolicy",
+                "iam:DeletePolicy",
+                "iam:DeleteGroupPolicy",
+                "iam:CreatePolicyVersion",
+                "iam:DeletePolicyVersion",
+                "iam:SetDefaultPolicyVersion"
+            ],
+            "Resource": [
+                "arn:aws:iam::*:policy/AWS*PolicyDefinition",
+                "arn:aws:iam::*:policy/UserCreationRestriction"
+            ]
+        },
+        {
+            "Sid": "VisualEditor13",
+            "Effect": "Deny",
+            "Action": "s3:*",
+            "Resource": "*",
+            "Condition": {
+                "StringNotEquals": {
+                    "aws:RequestedRegion": [
+                        "us-east-1",
+                        "us-east-2",
+                        "us-west-2"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "SageMakerRegionRestriction",
+            "Effect": "Deny",
+            "Action": "sagemaker:*",
+            "Resource": "*",
+            "Condition": {
+                "StringNotEquals": {
+                    "aws:RequestedRegion": [
+                        "us-east-1",
+                        "us-east-2",
+                        "us-west-2"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "DenyIAM",
+            "Effect": "Deny",
+            "Action": "iam:*",
+            "Resource": [
+                "arn:aws:iam::*:user/dev-admin",
+                "arn:aws:iam::*:role/OrganizationAccountAccessRole",
+                "arn:aws:iam::*:group/Admins"
+            ]
+        }
+    ]
+}
