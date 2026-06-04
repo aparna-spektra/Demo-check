@@ -10,6 +10,7 @@
                 "iam:GetRole",
                 "iam:CreateServiceLinkedRole",
                 "iam:GetPolicy",
+                "iam:ListPolicies",
                 "iam:CreateRole",
                 "iam:AttachRolePolicy",
                 "iam:PutRolePolicy"
