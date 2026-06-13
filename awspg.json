@@ -1,0 +1,21 @@
+{
+  "Effect": "Allow",
+  "Action": [
+    "redshift-serverless:CreateNamespace",
+    "redshift-serverless:CreateWorkgroup",
+    "redshift-serverless:GetNamespace",
+    "redshift-serverless:GetWorkgroup",
+    "redshift-serverless:ListNamespaces",
+    "redshift-serverless:ListWorkgroups",
+    "redshift-serverless:ListTagsForResource",
+
+    "redshift-data:ExecuteStatement",
+    "redshift-data:BatchExecuteStatement",
+    "redshift-data:DescribeStatement",
+    "redshift-data:GetStatementResult",
+    "redshift-data:ListStatements",
+    "redshift-data:CancelStatement",
+    "redshift:DescribeClusters"
+  ],
+  "Resource": "*"
+}
