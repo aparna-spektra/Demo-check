@@ -1,38 +1,27 @@
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Action": "*",
-            "Resource": "*",
-            "Effect": "Deny",
-            "Condition": {
-                "StringNotEquals": {
-                    "aws:RequestedRegion": [
-                        "us-east-1",
-                        "us-east-2",
-                        "us-west-2"
-                    ]
-                }
-            }
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "redshift-serverless:CreateWorkgroup",
-                "redshift-serverless:CreateNamespace",
-                "redshift-serverless:GetCredentials",
-                "redshift-serverless:ListWorkgroups",
-                "redshift-serverless:GetWorkgroup",
-                "redshift-serverless:ListNamespaces",
-                "redshift-serverless:GetNamespace",
-                "redshift-serverless:ListTagsForResource",
-                "redshift-data:ExecuteStatement",
-                "redshift-data:GetStatementResult",
-                "redshift-data:DescribeStatement",
-                "redshift-data:ListStatements",
-                "redshift:GetClusterCredentials"
-            ],
-            "Resource": "*"
-        }
-    ]
+    "Effect": "Allow",
+    "Action": [
+        "redshift-serverless:CreateWorkgroup",
+        "redshift-serverless:CreateNamespace",
+        "redshift-serverless:GetCredentials",
+        "redshift-serverless:ListWorkgroups",
+        "redshift-serverless:GetWorkgroup",
+        "redshift-serverless:ListNamespaces",
+        "redshift-serverless:GetNamespace",
+        "redshift-serverless:ListTagsForResource",
+        "redshift-serverless:TagResource",
+
+        "redshift-data:ExecuteStatement",
+        "redshift-data:GetStatementResult",
+        "redshift-data:DescribeStatement",
+        "redshift-data:ListStatements",
+
+        "redshift:GetClusterCredentials",
+
+        "iam:PassRole",
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeSecurityGroups"
+    ],
+    "Resource": "*"
 }
