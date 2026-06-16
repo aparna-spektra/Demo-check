@@ -40,7 +40,7 @@
     "location": "[resourceGroup().location]",
 
     "vmName": "[concat('labvm-', parameters('DeploymentID'))]",
-    "virtualMachineSize": "Standard_A1_v2",
+    "virtualMachineSize": "Standard_D2s_v3",
 
     "addressPrefix": "10.0.0.0/16",
     "subnetName": "default",
