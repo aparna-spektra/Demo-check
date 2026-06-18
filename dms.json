@@ -1,0 +1,76 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowedActionsOfAll",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:*",
+                "ebs:*",
+                "s3:*",
+                "iam:*",
+                "elasticloadbalancing:*",
+                "dms:*",
+                "kms:*",
+                "elasticfilesystem:*",
+                "glue:*",
+                "athena:*",
+                "cloudfront:*",
+                "dynamodb:*",
+                "redshift-serverless:*",
+                "rds:*",
+                "waf:*",
+                "wafv2:*",
+                "waf-regional:*",
+                "inspector:*",
+                "redshift:*",
+                "cloudformation:*",
+                "autoscaling:*",
+                "autoscaling:CreateLaunchConfiguration",
+                "ecs:*",
+                "servicediscovery:*",
+                "logs:*",
+                "ecr:*",
+                "cloudwatch:*",
+                "ec2-instance-connect:SendSSHPublicKey",
+                "ssm:*",
+                "cloudtrail:LookupEvents",
+                "resource-groups:*",
+                "tag:*",
+                "config:*",
+                "inspector2:*",
+                "lambda:*",
+                "cloudshell:*",
+                "sqs:*",
+                "sns:*",
+                "kinesis:*",
+                "kinesisanalytics:*",
+                "firehose:*",
+                "trustedadvisor:*",
+                "sqlworkbench:*",
+                "application-autoscaling:*",
+                "globalaccelerator:*",
+                "codecommit:*",
+                "codebuild:*",
+                "codepipeline:*",
+                "elasticbeanstalk:*",
+                "events:*",
+                "eks:*",
+                "aps:*",
+                "codedeploy:*",
+                "apigateway:*",
+                "codeconnections:*"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:RequestedRegion": [
+                        "us-east-1",
+                        "us-east-2",
+                        "us-west-2"
+                    ]
+                }
+            }
+        }
+    ]
+}
