@@ -1,21 +1,268 @@
 {
-  "Effect": "Allow",
-  "Action": [
-    "redshift-serverless:CreateNamespace",
-    "redshift-serverless:CreateWorkgroup",
-    "redshift-serverless:GetNamespace",
-    "redshift-serverless:GetWorkgroup",
-    "redshift-serverless:ListNamespaces",
-    "redshift-serverless:ListWorkgroups",
-    "redshift-serverless:ListTagsForResource",
-
-    "redshift-data:ExecuteStatement",
-    "redshift-data:BatchExecuteStatement",
-    "redshift-data:DescribeStatement",
-    "redshift-data:GetStatementResult",
-    "redshift-data:ListStatements",
-    "redshift-data:CancelStatement",
-    "redshift:DescribeClusters"
-  ],
-  "Resource": "*"
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "*",
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": "*",
+            "Resource": "*",
+            "Effect": "Deny",
+            "Condition": {
+                "StringNotEquals": {
+                    "aws:RequestedRegion": [
+                        "us-east-1",
+                        "us-east-2",
+                        "us-west-2"
+                    ]
+                }
+            }
+        },
+        {
+            "Action": "*",
+            "Resource": [
+                "arn:aws:iam::*:user/dev-admin",
+                "arn:aws:iam::*:group/Admins"
+            ],
+            "Effect": "Deny"
+        },
+        {
+            "Action": "ec2:*",
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "iam:CreateUser"
+            ],
+            "Resource": [
+                "arn:aws:iam::*:user/*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Condition": {
+                "StringNotLike": {
+                    "iam:PolicyARN": "arn:aws:iam::*:policy/usercreationrestriction"
+                }
+            },
+            "Action": [
+                "iam:AttachUserPolicy"
+            ],
+            "Resource": [
+                "arn:aws:iam::*:user/*"
+            ],
+            "Effect": "Deny"
+        },
+        {
+            "Condition": {
+                "ArnNotLike": {
+                    "iam:PolicyARN": "arn:aws:iam::*:policy/usercreationrestriction"
+                }
+            },
+            "Action": [
+                "iam:AttachGroupPolicy"
+            ],
+            "Resource": [
+                "arn:aws:iam::*:group/*"
+            ],
+            "Effect": "Deny"
+        },
+        {
+            "Action": [
+                "iam:PutUserPolicy",
+                "iam:CreateLoginProfile",
+                "iam:CreatePolicy",
+                "iam:GetAccountPasswordPolicy",
+                "iam:GetGroup",
+                "iam:GetLoginProfile",
+                "iam:GetPolicy",
+                "iam:GetPolicyVersion",
+                "iam:GetUser",
+                "iam:GetUserPolicy",
+                "iam:ListAttachedUserPolicies",
+                "iam:ListEntitiesForPolicy",
+                "iam:ListGroups",
+                "iam:ListGroupsForUser",
+                "iam:ListPolicies",
+                "iam:ListPolicyVersions",
+                "iam:ListRolePolicies",
+                "iam:ListSigningCertificates",
+                "iam:ListUserPolicies",
+                "iam:ListUsers",
+                "iam:SimulateCustomPolicy",
+                "iam:SimulatePrincipalPolicy",
+                "iam:UpdateUser"
+            ],
+            "Resource": [
+                "arn:aws:iam::*:*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "route53domains:ListDomains",
+                "waf:*",
+                "route53domains:ListOperations",
+                "wafv2:*",
+                "waf-regional:*",
+                "kinesis:*",
+                "redshift:*",
+                "firehose:*"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "ec2:CreateReservedInstancesListing",
+                "ec2:*Purchase*",
+                "rds:Purchase*",
+                "ec2:*Spot*",
+                "ec2:AllocateHosts",
+                "ec2:DescribeSpotInstanceRequests",
+                "ec2:DescribeHostReservationOfferings",
+                "ec2:DescribeHostReservations",
+                "ec2:DescribeHosts",
+                "ec2:DescribeSpotFleetRequests",
+                "ec2:DescribeSpotFleetInstances",
+                "ec2:DescribeReservedInstancesListings",
+                "ec2:DescribeReservedInstances",
+                "ec2:DescribeScheduledInstanceAvailability",
+                "ec2:GetCapacityReservationUsage",
+                "ec2:AcceptReservedInstancesExchangeQuote",
+                "ec2:CancelCapacityReservation",
+                "ec2:CancelReservedInstancesListing",
+                "ec2:CancelSpotFleetRequests",
+                "ec2:CancelSpotInstanceRequests",
+                "ec2:CreateCapacityReservation",
+                "ec2:CreateReservedInstancesListing",
+                "ec2:CreateSpotDatafeedSubscription",
+                "ec2:ModifyReservedInstances",
+                "ec2:ModifySpotFleetRequest",
+                "ec2:DeleteVpcEndpointConnectionNotifications",
+                "ec2:DeleteVpcEndpoints",
+                "ec2:DeleteVpcPeeringConnection",
+                "ec2:DeleteVpc",
+                "ec2:DeleteVpcEndpointServiceConfigurations",
+                "kendra:*",
+                "connect-campaigns:*",
+                "route53domains:*",
+                "network-firewall:*",
+                "fsx:*",
+                "quicksight:*",
+                "qdeveloper:*",
+                "qbusiness:*",
+                "q:*",
+                "qapps:*",
+                "fms:*",
+                "elasticache:*",
+                "workmail:*",
+                "workmailmessageflow:*",
+                "aws-marketplace:*",
+                "aws-marketplace-management:*",
+                "aws-marketplace:ViewSubscriptions",
+                "billing:*",
+                "iam:SetDefaultPolicyVersion",
+                "iam:DeletePolicyVersion",
+                "iam:DeletePolicy",
+                "iam:DeleteUserPolicy",
+                "iam:CreatePolicyVersion",
+                "iam:DetachUserPolicy",
+                "iam:UpdateAssumeRolePolicy",
+                "iam:DeactivateMFADevice",
+                "iam:DeleteAccessKey",
+                "iam:DeleteGroup",
+                "iam:UpdateOpenIDConnectProviderThumbprint",
+                "iam:UpdateGroup",
+                "iam:SetSecurityTokenServicePreferences",
+                "iam:DetachRolePolicy",
+                "iam:DeleteServerCertificate",
+                "iam:UploadSSHPublicKey",
+                "iam:DetachGroupPolicy",
+                "iam:DeleteOpenIDConnectProvider",
+                "iam:ChangePassword",
+                "iam:PutGroupPolicy",
+                "iam:UpdateLoginProfile",
+                "iam:UpdateServiceSpecificCredential",
+                "iam:RemoveClientIDFromOpenIDConnectProvider",
+                "iam:DeleteRole",
+                "iam:UpdateAccessKey",
+                "iam:UpdateSSHPublicKey",
+                "iam:UpdateServerCertificate",
+                "iam:DeleteSigningCertificate",
+                "iam:UpdateAccountPasswordPolicy",
+                "iam:DeleteServiceLinkedRole",
+                "iam:PutRolePermissionsBoundary",
+                "iam:DeleteSSHPublicKey",
+                "iam:CreateVirtualMFADevice",
+                "iam:DeleteRolePermissionsBoundary",
+                "iam:RemoveUserFromGroup",
+                "iam:DeleteRolePolicy",
+                "iam:EnableMFADevice",
+                "iam:ResyncMFADevice",
+                "iam:DeleteAccountAlias",
+                "iam:UpdateSAMLProvider",
+                "iam:DeleteLoginProfile",
+                "iam:DeleteInstanceProfile",
+                "iam:UploadSigningCertificate",
+                "iam:DeleteAccountPasswordPolicy",
+                "iam:PutUserPermissionsBoundary",
+                "iam:DeleteUser",
+                "iam:DeleteUserPermissionsBoundary",
+                "iam:UploadServerCertificate",
+                "iam:DeleteVirtualMFADevice",
+                "iam:UpdateSigningCertificate",
+                "iam:DeleteGroupPolicy",
+                "iam:DeleteServiceSpecificCredential",
+                "iam:DeleteSAMLProvider",
+                "iam:PutUserPolicy",
+                "acm-pca:*",
+                "acm:*"
+            ],
+            "Resource": "*",
+            "Effect": "Deny"
+        },
+        {
+            "Condition": {
+                "ForAnyValue:StringNotLike": {
+                    "ec2:InstanceType": [
+                        "*.nano",
+                        "*.micro",
+                        "*.small",
+                        "*.medium"
+                    ]
+                }
+            },
+            "Action": "ec2:RunInstances",
+            "Resource": "arn:aws:ec2:*:*:instance/*",
+            "Effect": "Deny"
+        },
+        {
+            "Condition": {
+                "NumericNotEquals": {
+                    "rds:Piops": "3000"
+                }
+            },
+            "Action": "rds:CreateDBInstance",
+            "Resource": "*",
+            "Effect": "Deny"
+        },
+        {
+            "Sid": "DenySageMakerNotebookInstanceType",
+            "Effect": "Deny",
+            "Action": "sagemaker:CreateNotebookInstance",
+            "Resource": "*",
+            "Condition": {
+                "ForAnyValue:StringNotLike": {
+                    "sagemaker:InstanceTypes": [
+                        "ml.t2.medium",
+                        "ml.t3.medium"
+                    ]
+                }
+            }
+        }
+    ]
 }
