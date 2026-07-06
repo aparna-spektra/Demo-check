@@ -1,0 +1,34 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowedActionsOfAll",
+      "Effect": "Allow",
+      "Action": [
+        "s3:*",
+        "ec2:*",
+        "iam:*",
+        "kms:*",
+        "glue:*",
+        "athena:*",
+        "logs:*",
+        "cloudwatch:*",
+        "lambda:*",
+        "events:*",
+        "bedrock:*",
+        "q:*",
+        "lakeformation:*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+          ]
+        }
+      }
+    }
+  ]
+}
