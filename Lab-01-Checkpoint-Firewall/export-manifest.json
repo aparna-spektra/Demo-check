@@ -1,0 +1,177 @@
+{
+  "packageId": "lab-01-checkpoint-firewall",
+  "slug": "lab-01-checkpoint-firewall",
+  "title": "Check Point Firewall — Administration & Policy Management (Lab 01)",
+  "version": 2,
+  "exportedAt": "2026-06-22T00:00:00.000Z",
+  "exportTarget": "zip",
+  "deliverableConfig": {
+    "arm": {
+      "enabled": true,
+      "stages": 1
+    },
+    "cse": {
+      "enabled": true
+    },
+    "labGuide": {
+      "enabled": true,
+      "exercises": 6
+    },
+    "questions": {
+      "enabled": false
+    },
+    "validations": {
+      "enabled": true
+    },
+    "solution": {
+      "enabled": true
+    },
+    "rbac": {
+      "enabled": false
+    },
+    "policy": {
+      "enabled": false
+    },
+    "readme": {
+      "enabled": false
+    },
+    "specSheet": {
+      "enabled": true
+    }
+  },
+  "artifacts": [
+    {
+      "path": "DeploymentPackage/deploy-01.json",
+      "kind": "deployment_arm",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "DeploymentPackage/deploy-01.parameters.json",
+      "kind": "deployment_params",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "DeploymentPackage/bootstrap-01.ps1",
+      "kind": "psscript",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "LabGuidePackage/LabGuide/GettingStarted.md",
+      "kind": "getting_started",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "LabGuidePackage/LabGuide/labguide-1.md",
+      "kind": "exercise_md",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "LabGuidePackage/LabGuide/labguide-2.md",
+      "kind": "exercise_md",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "LabGuidePackage/LabGuide/labguide-3.md",
+      "kind": "exercise_md",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "LabGuidePackage/LabGuide/labguide-4.md",
+      "kind": "exercise_md",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "LabGuidePackage/LabGuide/labguide-5.md",
+      "kind": "exercise_md",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "LabGuidePackage/LabGuide/labguide-6.md",
+      "kind": "exercise_md",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "LabGuidePackage/LabGuide/media/.gitkeep",
+      "kind": "media",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "LabGuidePackage/Solution-Guide/solution-guide.md",
+      "kind": "solution_md",
+      "lintStatus": "passed",
+      "facilitatorOnly": true
+    },
+    {
+      "path": "LabGuidePackage/masterdoc.json",
+      "kind": "masterdoc",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "spec.md",
+      "kind": "spec_md",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "Validations/Validation.md",
+      "kind": "validation_md",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "Validations/validate-task1-smartconsole.ps1",
+      "kind": "validation_script",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "Validations/validate-task2-rulebase.ps1",
+      "kind": "validation_script",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "Validations/validate-task3-policy-layering.ps1",
+      "kind": "validation_script",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "Validations/validate-task4-ssh-logging.ps1",
+      "kind": "validation_script",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "Validations/validate-task5-event-analysis.ps1",
+      "kind": "validation_script",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "Validations/validate-task6-compliance.ps1",
+      "kind": "validation_script",
+      "lintStatus": "passed",
+      "facilitatorOnly": false
+    },
+    {
+      "path": "assessment-brief.md",
+      "kind": "brief_md",
+      "lintStatus": "passed",
+      "facilitatorOnly": true
+    }
+  ],
+  "errors": []
+}
