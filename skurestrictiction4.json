@@ -1,0 +1,21 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "SageMakerInstanceTypeRestriction",
+            "Effect": "Deny",
+            "Action": [
+                "sagemaker:CreateTrainingJob",
+                "sagemaker:CreateHyperParameterTuningJob"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "ForAnyValue:StringNotEquals": {
+                    "sagemaker:InstanceTypes": [
+                        "ml.t3.medium"
+                    ]
+                }
+            }
+        }
+    ]
+}
