@@ -1,0 +1,40 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "SageMakerInstanceTypeRestriction",
+            "Effect": "Deny",
+            "Action": [
+                "sagemaker:CreateNotebookInstance",
+                "sagemaker:CreateTrainingJob",
+                "sagemaker:CreateProcessingJob",
+                "sagemaker:CreateTransformJob",
+                "sagemaker:CreateHyperParameterTuningJob",
+                "sagemaker:CreateEndpointConfig"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "ForAnyValue:StringNotEquals": {
+                    "sagemaker:InstanceTypes": [
+                        "ml.t3.medium"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "SageMakerRegionRestriction",
+            "Effect": "Deny",
+            "Action": "sagemaker:*",
+            "Resource": "*",
+            "Condition": {
+                "StringNotEquals": {
+                    "aws:RequestedRegion": [
+                        "us-east-1",
+                        "us-east-2",
+                        "us-west-2"
+                    ]
+                }
+            }
+        }
+    ]
+}
