@@ -1,0 +1,64 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DenyLargeECSTaskCPU",
+            "Effect": "Deny",
+            "Action": [
+                "ecs:RegisterTaskDefinition",
+                "ecs:CreateService",
+                "ecs:UpdateService"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "NumericGreaterThan": {
+                    "ecs:task-cpu": "256"
+                }
+            }
+        },
+        {
+            "Sid": "DenyLargeECSTaskMemory",
+            "Effect": "Deny",
+            "Action": [
+                "ecs:RegisterTaskDefinition",
+                "ecs:CreateService",
+                "ecs:UpdateService"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "NumericGreaterThan": {
+                    "ecs:task-memory": "512"
+                }
+            }
+        },
+        {
+            "Sid": "DenyLargeCodeBuildFleetInstanceTypes",
+            "Effect": "Deny",
+            "Action": "codebuild:CreateFleet",
+            "Resource": "*",
+            "Condition": {
+                "ForAnyValue:StringNotEquals": {
+                    "codebuild:computeConfiguration.instanceType": [
+                        "c5.large",
+                        "m5.large"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "DenyOutsideAllowedRegions",
+            "Effect": "Deny",
+            "Action": "*",
+            "Resource": "*",
+            "Condition": {
+                "StringNotEquals": {
+                    "aws:RequestedRegion": [
+                        "us-east-1",
+                        "us-east-2",
+                        "us-west-2"
+                    ]
+                }
+            }
+        }
+    ]
+}
