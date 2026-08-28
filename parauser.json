@@ -1,0 +1,12 @@
+{
+    "$schema": "",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "CloudLabsDeploymentID": {
+            "value": "GET-DEPLOYMENT-ID"
+        },
+        "CheckAcknowledgement": {
+            "value": "TRUE"
+        }
+    }
+}

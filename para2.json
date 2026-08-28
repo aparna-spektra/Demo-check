@@ -1,0 +1,290 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DenyIAMActions",
+            "Effect": "Deny",
+            "Action": [
+                "iam:CreateServiceSpecificCredential",
+                "iam:GetServiceLastAccessedDetailsWithEntities",
+                "iam:GenerateServiceLastAccessedDetails",
+                "iam:PutRolePermissionsBoundary",
+                "iam:ListPoliciesGrantingServiceAccess",
+                "iam:UpdateOpenIDConnectProviderThumbprint",
+                "iam:ResetServiceSpecificCredential",
+                "iam:DeleteSSHPublicKey",
+                "iam:ListServiceSpecificCredentials",
+                "iam:CreateSAMLProvider",
+                "iam:TagSAMLProvider",
+                "iam:DeleteRolePermissionsBoundary",
+                "iam:GetServiceLastAccessedDetails",
+                "iam:GetOrganizationsAccessReport",
+                "iam:ListSSHPublicKeys",
+                "iam:GenerateOrganizationsAccessReport",
+                "iam:ListOpenIDConnectProviderTags",
+                "iam:CreateAccountAlias",
+                "iam:ListSAMLProviderTags",
+                "iam:UploadSSHPublicKey",
+                "iam:DeleteAccountAlias",
+                "iam:DeleteOpenIDConnectProvider",
+                "iam:UpdateSAMLProvider",
+                "iam:GetSAMLProvider",
+                "iam:UpdateServiceSpecificCredential",
+                "iam:UntagSAMLProvider",
+                "iam:ListSAMLProviders",
+                "iam:RemoveClientIDFromOpenIDConnectProvider",
+                "iam:PutUserPermissionsBoundary",
+                "iam:GetSSHPublicKey",
+                "iam:DeleteUserPermissionsBoundary",
+                "iam:UpdateSSHPublicKey",
+                "iam:CreateOpenIDConnectProvider",
+                "iam:ListOpenIDConnectProviders",
+                "iam:ListAccountAliases",
+                "iam:UntagOpenIDConnectProvider",
+                "iam:GetOpenIDConnectProvider",
+                "iam:AddClientIDToOpenIDConnectProvider",
+                "iam:DeleteServiceSpecificCredential",
+                "iam:TagOpenIDConnectProvider",
+                "iam:DeleteSAMLProvider",
+                "ec2:PurchaseHostReservation",
+                "ec2:GetHostReservationPurchasePreview",
+                "ec2:DescribeHostReservationOfferings",
+                "ec2:ModifySpotFleetRequest",
+                "ec2:DescribeScheduledInstanceAvailability",
+                "ec2:DescribeSpotDatafeedSubscription",
+                "ec2:DescribeReservedInstances",
+                "ec2:DescribeReservedInstancesListings",
+                "ec2:PurchaseScheduledInstances",
+                "ec2:CreateReservedInstancesListing",
+                "ec2:DescribeCapacityReservations",
+                "ec2:DescribeSpotFleetRequestHistory",
+                "ec2:DescribeReservedInstancesOfferings",
+                "ec2:CancelCapacityReservationFleets",
+                "ec2:GetGroupsForCapacityReservation",
+                "ec2:ModifyHosts",
+                "ec2:GetReservedInstancesExchangeQuote",
+                "ec2:CancelSpotInstanceRequests",
+                "ec2:DescribeScheduledInstances",
+                "ec2:GetSpotPlacementScores",
+                "ec2:CancelCapacityReservation",
+                "ec2:DescribeReservedInstancesModifications",
+                "ec2:DeleteQueuedReservedInstances",
+                "ec2:ModifyInstanceCapacityReservationAttributes",
+                "ec2:DeleteSpotDatafeedSubscription",
+                "ec2:DescribeCapacityReservationFleets",
+                "ec2:PurchaseReservedInstancesOffering",
+                "ec2:RequestSpotInstances",
+                "ec2:RunScheduledInstances",
+                "ec2:CancelSpotFleetRequests",
+                "ec2:GetCapacityReservationUsage",
+                "ec2:RequestSpotFleet",
+                "ec2:ModifyVolume",
+                "ec2:DescribeSpotInstanceRequests",
+                "ec2:ReleaseHosts",
+                "ec2:DescribeSpotPriceHistory",
+                "ec2:CreateCapacityReservationFleet",
+                "ec2:CreateCapacityReservation",
+                "ec2:CreateSpotDatafeedSubscription",
+                "ec2:ModifyReservedInstances",
+                "ec2:DescribeHostReservations",
+                "ec2:SendSpotInstanceInterruptions",
+                "ec2:ModifyCapacityReservationFleet",
+                "ec2:DescribeSpotFleetRequests",
+                "ec2:DescribeHosts",
+                "ec2:DescribeSpotFleetInstances",
+                "ec2:ModifyCapacityReservation",
+                "ec2:AcceptReservedInstancesExchangeQuote",
+                "ec2:AllocateHosts",
+                "eks:CreateNodegroup",
+                "eks:DescribeNodegroup",
+                "eks:UpdateNodegroupConfig",
+                "eks:CreateFargateProfile",
+                "eks:DescribeFargateProfile",
+                "ec2:CancelReservedInstancesListing"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "DenyOutsideAllowedRegions",
+            "Effect": "Deny",
+            "Action": "*",
+            "Resource": "*",
+            "Condition": {
+                "StringNotEquals": {
+                    "aws:RequestedRegion": [
+                        "us-east-1",
+                        "us-east-2",
+                        "us-west-2"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "DenysizeVolume",
+            "Effect": "Deny",
+            "Action": [
+                "ec2:AttachVolume",
+                "ec2:CreateVolume",
+                "ec2:StartInstances",
+                "ec2:RunInstances"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "NumericGreaterThan": {
+                    "ec2:VolumeSize": "30"
+                }
+            }
+        },
+        {
+            "Sid": "denyIops",
+            "Effect": "Deny",
+            "Action": [
+                "ec2:AttachVolume",
+                "ec2:CreateVolume",
+                "ec2:StartInstances",
+                "ec2:RunInstances"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "NumericGreaterThan": {
+                    "ec2:VolumeIops": "3000"
+                }
+            }
+        },
+        {
+            "Sid": "EBSVolumeRestriction",
+            "Effect": "Deny",
+            "Action": "ec2:*",
+            "Resource": "*",
+            "Condition": {
+                "ForAnyValue:StringNotEquals": {
+                    "ec2:VolumeType": [
+                        "gp2",
+                        "gp3"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "ec2alldenyifinstancetype",
+            "Effect": "Deny",
+            "Action": "ec2:*",
+            "Resource": "arn:aws:ec2:*:*:instance/*",
+            "Condition": {
+                "ForAnyValue:StringNotLike": {
+                    "ec2:InstanceType": [
+                        "t2.micro",
+                        "t3.micro"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "rdsdenyifclass",
+            "Effect": "Deny",
+            "Action": [
+                "rds:CreateDBCluster",
+                "rds:CreateDBInstance"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringNotLike": {
+                    "rds:DatabaseClass": [
+                        "db.t3.micro",
+                        "db.t3.small"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "rdstorage",
+            "Effect": "Deny",
+            "Action": [
+                "rds:CreateDBCluster",
+                "rds:CreateDBInstance"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "NumericGreaterThanEquals": {
+                    "rds:StorageSize": "31",
+                    "rds:Piops": "0"
+                }
+            }
+        },
+        {
+            "Sid": "AllowIamAllaction",
+            "Effect": "Allow",
+            "Action": "iam:*",
+            "Resource": "*"
+        },
+        {
+            "Sid": "DenyifAdminOrgRole",
+            "Effect": "Deny",
+            "Action": "iam:*",
+            "Resource": [
+                "arn:aws:iam::*:user/dev-admin",
+                "arn:aws:iam::*:group/Admins",
+                "arn:aws:iam::*:role/OrganizationAccountAccessRole"
+            ]
+        },
+        {
+            "Sid": "removefromAttendee",
+            "Effect": "Deny",
+            "Action": [
+                "iam:RemoveUserFromGroup",
+                "iam:AddUserToGroup"
+            ],
+            "Resource": "arn:aws:iam::*:group/Attendees"
+        },
+        {
+            "Sid": "attachmentofPolicy",
+            "Effect": "Deny",
+            "Action": [
+                "iam:AttachGroupPolicy",
+                "iam:AttachUserPolicy",
+                "iam:PutGroupPolicy",
+                "iam:PutUserPolicy"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "ArnNotLike": {
+                    "iam:PolicyARN": [
+                        "arn:aws:iam::*:policy/UserCreationRestriction"
+                   ]
+                }
+            }
+        },
+        {
+            "Sid": "DetachofPolicy",
+            "Effect": "Deny",
+            "Action": [
+                "iam:DetachGroupPolicy",
+                "iam:DetachUserPolicy"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "ArnLike": {
+                    "iam:PolicyARN": "arn:aws:iam::*:policy/AWS*PolicyDefinition"
+                }
+            }
+        },
+        {
+            "Sid": "DenyCreationAndVersion",
+            "Effect": "Deny",
+            "Action": [
+                "iam:CreatePolicy",
+                "iam:CreatePolicyVersion",
+                "iam:SetDefaultPolicyVersion",
+                "iam:DeleteRolePolicy",
+                "iam:DeleteUserPolicy",
+                "iam:DeletePolicy",
+                "iam:DeleteGroupPolicy",
+                "iam:DeletePolicyVersion"
+            ],
+            "Resource": [
+                "arn:aws:iam::*:policy/AWS*PolicyDefinition",
+                "arn:aws:iam::*:policy/UserCreationRestriction"
+            ]
+        }
+    ]
+}

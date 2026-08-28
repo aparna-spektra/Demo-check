@@ -1,0 +1,308 @@
+{
+  "Resources": {
+
+    "Restriction": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "ManagedPolicyName": "UserCreationRestriction",
+        "Description": "Policy to be attached to AWS entity created by users",
+        "Path": "/",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "DenyIAMActions",
+              "Effect": "Deny",
+              "Action": [
+                "iam:CreateServiceSpecificCredential",
+                "iam:GetServiceLastAccessedDetailsWithEntities",
+                "iam:GenerateServiceLastAccessedDetails",
+                "iam:PutRolePermissionsBoundary",
+                "iam:ListPoliciesGrantingServiceAccess",
+                "iam:UpdateOpenIDConnectProviderThumbprint",
+                "iam:ResetServiceSpecificCredential",
+                "iam:DeleteSSHPublicKey",
+                "iam:ListServiceSpecificCredentials",
+                "iam:CreateSAMLProvider",
+                "iam:TagSAMLProvider",
+                "iam:DeleteRolePermissionsBoundary",
+                "iam:GetServiceLastAccessedDetails",
+                "iam:GetOrganizationsAccessReport",
+                "iam:ListSSHPublicKeys",
+                "iam:GenerateOrganizationsAccessReport",
+                "iam:ListOpenIDConnectProviderTags",
+                "iam:CreateAccountAlias",
+                "iam:ListSAMLProviderTags",
+                "iam:UploadSSHPublicKey",
+                "iam:DeleteAccountAlias",
+                "iam:DeleteOpenIDConnectProvider",
+                "iam:UpdateSAMLProvider",
+                "iam:GetSAMLProvider",
+                "iam:UpdateServiceSpecificCredential",
+                "iam:UntagSAMLProvider",
+                "iam:ListSAMLProviders",
+                "iam:RemoveClientIDFromOpenIDConnectProvider",
+                "iam:PutUserPermissionsBoundary",
+                "iam:GetSSHPublicKey",
+                "iam:DeleteUserPermissionsBoundary",
+                "iam:UpdateSSHPublicKey",
+                "iam:CreateOpenIDConnectProvider",
+                "iam:ListOpenIDConnectProviders",
+                "iam:ListAccountAliases",
+                "iam:UntagOpenIDConnectProvider",
+                "iam:GetOpenIDConnectProvider",
+                "iam:AddClientIDToOpenIDConnectProvider",
+                "iam:DeleteServiceSpecificCredential",
+                "iam:TagOpenIDConnectProvider",
+                "iam:DeleteSAMLProvider",
+                "eks:CreateNodegroup",
+                "eks:DescribeNodegroup",
+                "eks:UpdateNodegroupConfig",
+                "eks:CreateFargateProfile",
+                "eks:DescribeFargateProfile"
+              ],
+              "Resource": "*"
+            },
+
+            {
+              "Sid": "DenyOutsideAllowedRegions",
+              "Effect": "Deny",
+              "Action": "*",
+              "Resource": "*",
+              "Condition": {
+                "StringNotEquals": {
+                  "aws:RequestedRegion": [
+                    "us-east-1",
+                    "us-east-2",
+                    "us-west-2"
+                  ]
+                }
+              }
+            },
+
+            {
+              "Sid": "AllowIamAllaction",
+              "Effect": "Allow",
+              "Action": "iam:*",
+              "Resource": "*"
+            },
+
+            {
+              "Sid": "DenyifAdminOrgRole",
+              "Effect": "Deny",
+              "Action": "iam:*",
+              "Resource": [
+                "arn:aws:iam::*:user/dev-admin",
+                "arn:aws:iam::*:group/Admins",
+                "arn:aws:iam::*:role/OrganizationAccountAccessRole"
+              ]
+            },
+
+            {
+              "Sid": "removefromAttendee",
+              "Effect": "Deny",
+              "Action": [
+                "iam:RemoveUserFromGroup",
+                "iam:AddUserToGroup"
+              ],
+              "Resource": "arn:aws:iam::*:group/Attendees"
+            },
+
+            {
+              "Sid": "DetachofPolicy",
+              "Effect": "Deny",
+              "Action": [
+                "iam:DetachGroupPolicy",
+                "iam:DetachUserPolicy"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "ArnLike": {
+                  "iam:PolicyARN": "arn:aws:iam::*:policy/AWS*PolicyDefinition"
+                }
+              }
+            },
+
+            {
+              "Sid": "DenyCreationAndVersion",
+              "Effect": "Deny",
+              "Action": [
+                "iam:DeleteRolePolicy",
+                "iam:DeleteUserPolicy",
+                "iam:DeletePolicy",
+                "iam:DeleteGroupPolicy",
+                "iam:DeletePolicyVersion"
+              ],
+              "Resource": [
+                "arn:aws:iam::*:policy/AWS*PolicyDefinition"
+              ]
+            },
+
+            {
+              "Sid": "DenySpecificIAMWriteActions",
+              "Effect": "Deny",
+              "Action": [
+                "iam:CreateUser",
+                "iam:CreatePolicy",
+                "iam:CreatePolicyVersion",
+                "iam:SetDefaultPolicyVersion",
+                "iam:AttachUserPolicy",
+                "iam:AttachGroupPolicy"
+              ],
+              "Resource": "*"
+            },
+
+            {
+              "Sid": "AllowFullAccessRequiredServices",
+              "Effect": "Allow",
+              "Action": [
+                "ecs:*",
+                "ecr:*",
+                "bedrock:*",
+                "secretsmanager:*",
+                "cloudwatch:*",
+                "logs:*"
+              ],
+              "Resource": "*"
+            },
+
+            {
+              "Sid": "AllowPassRoleForECSTasks",
+              "Effect": "Allow",
+              "Action": "iam:PassRole",
+              "Resource": [
+                "arn:aws:iam::*:role/ecsTaskExecutionRole",
+                "arn:aws:iam::*:role/ECSBedrockTaskRole"
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "iam:PassedToService": "ecs-tasks.amazonaws.com"
+                }
+              }
+            },
+
+            {
+              "Sid": "DenyPassRoleToOtherRoles",
+              "Effect": "Deny",
+              "Action": "iam:PassRole",
+              "NotResource": [
+                "arn:aws:iam::*:role/ecsTaskExecutionRole",
+                "arn:aws:iam::*:role/ECSBedrockTaskRole"
+              ]
+            },
+
+            {
+              "Sid": "DenyPassRoleToOtherServices",
+              "Effect": "Deny",
+              "Action": "iam:PassRole",
+              "Resource": [
+                "arn:aws:iam::*:role/ecsTaskExecutionRole",
+                "arn:aws:iam::*:role/ECSBedrockTaskRole"
+              ],
+              "Condition": {
+                "StringNotEquals": {
+                  "iam:PassedToService": "ecs-tasks.amazonaws.com"
+                }
+              }
+            },
+
+            {
+              "Sid": "AllowVPCNetworkingForECS",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:DescribeVpcs",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:CreateNetworkInterface",
+                "ec2:DeleteNetworkInterface",
+                "ec2:CreateNetworkInterfacePermission",
+                "ec2:DeleteNetworkInterfacePermission",
+                "ec2:DescribeAvailabilityZones",
+                "ec2:DescribeAccountAttributes",
+                "ec2:DescribeNetworkAcls",
+                "ec2:DescribeRouteTables",
+                "ec2:DescribeInternetGateways",
+                "ec2:DescribeNatGateways",
+                "ec2:DescribeVpcAttribute",
+                "ec2:DescribeTags"
+              ],
+              "Resource": "*"
+            },
+
+            {
+              "Sid": "AllowVPCCreationAndManagement",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:CreateVpc",
+                "ec2:DeleteVpc",
+                "ec2:ModifyVpcAttribute",
+                "ec2:CreateSubnet",
+                "ec2:DeleteSubnet",
+                "ec2:ModifySubnetAttribute",
+                "ec2:CreateInternetGateway",
+                "ec2:DeleteInternetGateway",
+                "ec2:AttachInternetGateway",
+                "ec2:DetachInternetGateway",
+                "ec2:CreateRouteTable",
+                "ec2:DeleteRouteTable",
+                "ec2:CreateRoute",
+                "ec2:DeleteRoute",
+                "ec2:AssociateRouteTable",
+                "ec2:DisassociateRouteTable",
+                "ec2:ReplaceRouteTableAssociation",
+                "ec2:CreateSecurityGroup",
+                "ec2:DeleteSecurityGroup",
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:AuthorizeSecurityGroupEgress",
+                "ec2:RevokeSecurityGroupIngress",
+                "ec2:RevokeSecurityGroupEgress",
+                "ec2:CreateNetworkAcl",
+                "ec2:CreateNetworkAclEntry",
+                "ec2:DeleteNetworkAcl",
+                "ec2:DeleteNetworkAclEntry",
+                "ec2:ReplaceNetworkAclAssociation",
+                "ec2:ReplaceNetworkAclEntry",
+                "ec2:CreateDhcpOptions",
+                "ec2:DeleteDhcpOptions",
+                "ec2:AssociateDhcpOptions",
+                "ec2:CreateTags",
+                "ec2:DeleteTags",
+                "ec2:CreateVpcEndpoint",
+                "ec2:DeleteVpcEndpoints",
+                "ec2:DescribeVpcEndpoints",
+                "ec2:ModifyVpcEndpoint"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      }
+    },
+
+    "UserCreationRestrictionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": "UserCreationRestriction",
+        "Path": "/",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Ref": "Restriction"
+          }
+        ]
+      }
+    }
+  }
+}
