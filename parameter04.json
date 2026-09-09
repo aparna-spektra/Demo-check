@@ -1,0 +1,39 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "DID": {
+            "value": "GET-DEPLOYMENT-ID"
+        },
+        "vmAdminUserName": {
+            "value": "Labuser"
+        },
+        "vmAdminPassword": {
+            "value": "Password.1!!"
+        },
+        "trainerUserName": {
+            "value": "trainer"
+        },
+        "trainerUserPassword": {
+            "value": "Password.1!!"
+        },
+        "imgid": {
+            "value": "/subscriptions/2b39737e-1727-4625-93f2-d5d6739f9a85/resourcegroups/CloudLabs-mgmt-rg/providers/Microsoft.Compute/galleries/ArrowCustomImages/images/arrow_qualcomm_windows_2025/versions/latest"
+        },
+        "disksize": {
+            "value": "256"
+        },
+        "ODLID": {
+            "value": "GET-ODL-ID"
+        },
+        "InstallCloudLabsShadow": {
+            "value": "yes"
+        },
+        "userEmail": {
+            "value": "GET-USER-EMAIL-ID" 
+        },
+        "DeploymentID": {
+            "value": "GET-DEPLOYMENT-ID"     
+        }
+    }
+}
