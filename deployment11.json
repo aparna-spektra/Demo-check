@@ -84,7 +84,9 @@
       "location": "[variables('location')]",
       "properties": {
         "addressSpace": {
-          "addressPrefixes": [ "[variables('addressPrefix')]" ]
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
+          ]
         },
         "subnets": [
           {
@@ -367,12 +369,13 @@
           "vmSize": "[variables('virtualMachineSize')]"
         },
         "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2022-datacenter-azure-edition"
+          },
           "osDisk": {
-            "createOption": "fromImage",
-            "name": "[concat(variables('vmName'), '-osdisk')]",
-            "managedDisk": {
-              "storageAccountType": "Standard_LRS"
-            }
+            "createOption": "fromImage"
           },
           "dataDisks": []
         },
@@ -404,12 +407,13 @@
           "vmSize": "[variables('cpVmSize')]"
         },
         "storageProfile": {
+          "imageReference": {
+            "publisher": "checkpoint",
+            "offer": "[variables('cpImageOffer')]",
+            "sku": "[variables('cpMgmtImageSku')]"
+          },
           "osDisk": {
-            "createOption": "fromImage",
-            "name": "[concat(variables('cpMgmtVmName'), '-osdisk')]",
-            "managedDisk": {
-              "storageAccountType": "Standard_LRS"
-            }
+            "createOption": "fromImage"
           }
         },
         "networkProfile": {
@@ -442,27 +446,34 @@
           "vmSize": "[variables('cpVmSize')]"
         },
         "storageProfile": {
+          "imageReference": {
+            "publisher": "checkpoint",
+            "offer": "[variables('cpImageOffer')]",
+            "sku": "[variables('cpGwImageSku')]"
+          },
           "osDisk": {
-            "createOption": "fromImage",
-            "name": "[concat(variables('cpGwVmName'), '-osdisk')]",
-            "managedDisk": {
-              "storageAccountType": "Standard_LRS"
-            }
+            "createOption": "fromImage"
           }
         },
         "networkProfile": {
           "networkInterfaces": [
             {
               "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('cpGwMgmtNicName'))]",
-              "properties": { "primary": true }
+              "properties": {
+                "primary": true
+              }
             },
             {
               "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('cpGwExtNicName'))]",
-              "properties": { "primary": false }
+              "properties": {
+                "primary": false
+              }
             },
             {
               "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('cpGwIntNicName'))]",
-              "properties": { "primary": false }
+              "properties": {
+                "primary": false
+              }
             }
           ]
         }
