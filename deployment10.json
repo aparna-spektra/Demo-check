@@ -1,0 +1,609 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Lab 01 Check Point Firewall - fully fresh Marketplace deployment. Windows jump VM and Check Point Management/Gateway VMs are deployed from Marketplace images. Check Point VMs run unattended Gaia first-time configuration through customData.",
+    "comments": "ENVIRONMENT BRING-UP: All three VMs are deployed from Marketplace images. The Windows jump VM uses Windows Server 2022 and installs/verifies SmartConsole through the existing bootstrap script. The Check Point Management and Gateway VMs use the Check Point CloudGuard R82 Marketplace images and run config_system during first boot. After deployment, verify licensing, SIC, SmartConsole connectivity, configure the Gateway object, install the baseline policy, test the lab, and only then capture new specialized Gallery images."
+  },
+  "parameters": {
+    "adminUsername": {
+      "type": "string"
+    },
+    "adminPassword": {
+      "type": "securestring"
+    },
+    "azureUserName": {
+      "type": "string"
+    },
+    "azurePassword": {
+      "type": "securestring"
+    },
+    "ODLID": {
+      "type": "String"
+    },
+    "DeploymentID": {
+      "type": "string"
+    },
+    "trainerUserName": {
+      "type": "string"
+    },
+    "trainerUserPassword": {
+      "type": "string"
+    },
+    "windowsImageVersion": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Windows Server 2022 Marketplace image version."
+      }
+    },
+    "cpMarketplaceImageVersion": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Check Point CloudGuard R82 Marketplace image version."
+      }
+    },
+    "cpVmAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Azure OS administrator password used to provision the fresh Check Point Marketplace VMs. Must meet Azure Linux VM password requirements."
+      }
+    }
+  },
+  "variables": {
+    "labVmPrivateIp": "10.0.0.5",
+    "cloudlabsCommon": "[concat(' -AzureUserName ', parameters('azureUserName'), ' -AzurePassword ', parameters('azurePassword'), ' -AzureTenantID ', variables('AzureTenantID'), ' -AzureSubscriptionID ', variables('AzureSubscriptionID'), ' -odlId ', parameters('ODLID'), ' -DeploymentID ', parameters('DeploymentID'))]",
+    "labSeedUser": "labuser",
+    "AzureSubscriptionID": "[subscription().subscriptionId]",
+    "AzureTenantID": "[subscription().tenantId]",
+    "bootstrapScriptUri": "https://experienceazure.blob.core.windows.net/templates/microland/DNS-Checkpoint-FW-Assesment-1/bootstrap-01.ps1",
+    "windowsImagePublisher": "MicrosoftWindowsServer",
+    "windowsImageOffer": "WindowsServer",
+    "windowsImageSku": "2022-datacenter-azure-edition",
+    "cpImageOffer": "check-point-cg-r82",
+    "cpMgmtImageSku": "mgmt-byol",
+    "cpGwImageSku": "sg-byol",
+    "cpAdminUser": "demouser",
+    "cpAdminPassword": "Chkp@12345",
+    "cpSicKey": "vpn123456",
+    "mgmtCustomData": "#!/bin/bash\nconfig_system -s \"install_security_gw=false&install_security_managment=true&install_mgmt_primary=true&install_mgmt_secondary=false&mgmt_admin_radio=gui_admin&mgmt_admin_name=admin&mgmt_admin_passwd=Chkp@12345&mgmt_gui_clients_radio=any&ftw_sic_key=vpn123456&download_info=true&upload_info=true&reboot_if_required=true\"\n",
+    "gwCustomData": "#!/bin/bash\nconfig_system -s \"install_security_gw=true&install_ppak=true&gateway_cluster_member=false&install_security_managment=false&ftw_sic_key=vpn123456&download_info=true&upload_info=true&reboot_if_required=true\"\n",
+    "cpMgmtIp": "10.0.0.10",
+    "addressPrefix": "10.0.0.0/16",
+    "mgmtSubnetName": "mgmt",
+    "mgmtSubnetPrefix": "10.0.0.0/24",
+    "externalSubnetName": "external",
+    "externalSubnetPrefix": "10.0.1.0/24",
+    "internalSubnetName": "internal",
+    "internalSubnetPrefix": "10.0.2.0/24",
+    "networkInterfaceName": "[concat(variables('vmName'), '-nic')]",
+    "networkSecurityGroupName": "[concat(variables('vmName'), '-nsg')]",
+    "publicIpAddressDNSName": "[concat('labvm', uniqueString(resourceGroup().id))]",
+    "publicIpAddressName": "[concat(variables('vmName'), '-pip')]",
+    "virtualMachineSize": "Standard_D2s_v3",
+    "virtualNetworkName": "labvNet",
+    "vmName": "[concat('labvm-', parameters('DeploymentID'))]",
+    "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets/', variables('virtualNetworkName'), variables('mgmtSubnetName'))]",
+    "externalSubnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets/', variables('virtualNetworkName'), variables('externalSubnetName'))]",
+    "internalSubnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets/', variables('virtualNetworkName'), variables('internalSubnetName'))]",
+    "cpMgmtVmName": "cp-mgmt",
+    "cpGwVmName": "cp-gw",
+    "cpVmSize": "Standard_D8s_v4",
+    "cpNsgName": "checkpoint-mgmt-nsg",
+    "cpMgmtPipName": "cp-mgmt-pip",
+    "cpGwExtPipName": "cp-gw-ext-pip",
+    "cpMgmtNicName": "cp-mgmt-nic",
+    "cpGwMgmtNicName": "cp-gw-mgmt-nic",
+    "cpGwExtNicName": "cp-gw-ext-nic",
+    "cpGwIntNicName": "cp-gw-int-nic",
+    "location": "[resourceGroup().location]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2017-04-01",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('mgmtSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('mgmtSubnetPrefix')]"
+            }
+          },
+          {
+            "name": "[variables('externalSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('externalSubnetPrefix')]"
+            }
+          },
+          {
+            "name": "[variables('internalSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('internalSubnetPrefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIpAddresses",
+      "apiVersion": "2017-08-01",
+      "name": "[variables('publicIpAddressName')]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIpAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('publicIpAddressDNSName')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIpAddresses",
+      "apiVersion": "2017-08-01",
+      "name": "[variables('cpMgmtPipName')]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIpAllocationMethod": "Static"
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIpAddresses",
+      "apiVersion": "2017-08-01",
+      "name": "[variables('cpGwExtPipName')]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIpAllocationMethod": "Static"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2017-06-01",
+      "name": "[variables('networkSecurityGroupName')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "default-allow-rdp",
+            "properties": {
+              "priority": 110,
+              "protocol": "TCP",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "3389"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2017-06-01",
+      "name": "[variables('cpNsgName')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Allow-Mgmt-SSH",
+            "properties": {
+              "priority": 1000,
+              "protocol": "TCP",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "10.0.0.0/24",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "22"
+            }
+          },
+          {
+            "name": "Allow-Mgmt-HTTPS",
+            "properties": {
+              "priority": 1010,
+              "protocol": "TCP",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "10.0.0.0/24",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "443"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2016-09-01",
+      "name": "[variables('networkInterfaceName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/publicIpAddresses/', variables('publicIpAddressName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              },
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[variables('labVmPrivateIp')]",
+              "publicIpAddress": {
+                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('publicIpAddressName'))]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2016-09-01",
+      "name": "[variables('cpMgmtNicName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/publicIpAddresses/', variables('cpMgmtPipName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('cpNsgName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig-mgmt",
+            "properties": {
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              },
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[variables('cpMgmtIp')]",
+              "publicIpAddress": {
+                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('cpMgmtPipName'))]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('cpNsgName'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2016-09-01",
+      "name": "[variables('cpGwMgmtNicName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('cpNsgName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig-gw-mgmt",
+            "properties": {
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              },
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "10.0.0.20"
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('cpNsgName'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2016-09-01",
+      "name": "[variables('cpGwExtNicName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/publicIpAddresses/', variables('cpGwExtPipName'))]"
+      ],
+      "properties": {
+        "enableIPForwarding": true,
+        "ipConfigurations": [
+          {
+            "name": "ipconfig-gw-ext",
+            "properties": {
+              "subnet": {
+                "id": "[variables('externalSubnetRef')]"
+              },
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "10.0.1.4",
+              "publicIpAddress": {
+                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('cpGwExtPipName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2016-09-01",
+      "name": "[variables('cpGwIntNicName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+      ],
+      "properties": {
+        "enableIPForwarding": true,
+        "ipConfigurations": [
+          {
+            "name": "ipconfig-gw-int",
+            "properties": {
+              "subnet": {
+                "id": "[variables('internalSubnetRef')]"
+              },
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "10.0.2.4"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2019-07-01",
+      "name": "[variables('vmName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfaceName'))]"
+      ],
+      "plan": {
+        "name": "[variables('windowsImageSku')]",
+        "publisher": "[variables('windowsImagePublisher')]",
+        "product": "[variables('windowsImageOffer')]"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('virtualMachineSize')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('windowsImagePublisher')]",
+            "offer": "[variables('windowsImageOffer')]",
+            "sku": "[variables('windowsImageSku')]",
+            "version": "[parameters('windowsImageVersion')]"
+          },
+          "osDisk": {
+            "createOption": "fromImage",
+            "name": "[concat(variables('vmName'), '-osdisk')]",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[variables('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "enableAutomaticUpdates": true
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2019-07-01",
+      "name": "[variables('cpMgmtVmName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('cpMgmtNicName'))]"
+      ],
+      "plan": {
+        "name": "[variables('cpMgmtImageSku')]",
+        "publisher": "checkpoint",
+        "product": "[variables('cpImageOffer')]"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('cpVmSize')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "checkpoint",
+            "offer": "[variables('cpImageOffer')]",
+            "sku": "[variables('cpMgmtImageSku')]",
+            "version": "[parameters('cpMarketplaceImageVersion')]"
+          },
+          "osDisk": {
+            "createOption": "fromImage",
+            "name": "[concat(variables('cpMgmtVmName'), '-osdisk')]",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('cpMgmtNicName'))]"
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[variables('cpMgmtVmName')]",
+          "adminUsername": "[variables('cpAdminUser')]",
+          "adminPassword": "[parameters('cpVmAdminPassword')]",
+          "customData": "[base64(variables('mgmtCustomData'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2019-07-01",
+      "name": "[variables('cpGwVmName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('cpGwMgmtNicName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', variables('cpGwExtNicName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', variables('cpGwIntNicName'))]",
+        "[concat('Microsoft.Compute/virtualMachines/', variables('cpMgmtVmName'))]"
+      ],
+      "plan": {
+        "name": "[variables('cpGwImageSku')]",
+        "publisher": "checkpoint",
+        "product": "[variables('cpImageOffer')]"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('cpVmSize')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "checkpoint",
+            "offer": "[variables('cpImageOffer')]",
+            "sku": "[variables('cpGwImageSku')]",
+            "version": "[parameters('cpMarketplaceImageVersion')]"
+          },
+          "osDisk": {
+            "createOption": "fromImage",
+            "name": "[concat(variables('cpGwVmName'), '-osdisk')]",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('cpGwMgmtNicName'))]",
+              "properties": {
+                "primary": true
+              }
+            },
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('cpGwExtNicName'))]",
+              "properties": {
+                "primary": false
+              }
+            },
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('cpGwIntNicName'))]",
+              "properties": {
+                "primary": false
+              }
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[variables('cpGwVmName')]",
+          "adminUsername": "[variables('cpAdminUser')]",
+          "adminPassword": "[parameters('cpVmAdminPassword')]",
+          "customData": "[base64(variables('gwCustomData'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('vmName'), '/', 'windowsExtension')]",
+      "apiVersion": "2019-07-01",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
+      ],
+      "tags": {
+        "displayName": "VM Extension"
+      },
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.10",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris": [
+            "[variables('bootstrapScriptUri')]"
+          ]
+        },
+        "protectedSettings": {
+          "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File microland/DNS-Checkpoint-FW-Assesment-1/bootstrap-01.ps1', variables('cloudlabsCommon'))]"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "Deployment ID": {
+      "type": "string",
+      "value": "[parameters('DeploymentID')]"
+    },
+    "LABVM Admin Username": {
+      "type": "string",
+      "value": "[parameters('adminUsername')]"
+    },
+    "LABVM Admin Password": {
+      "type": "string",
+      "value": "[parameters('adminPassword')]"
+    },
+    "LABVM DNS Name": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpAddressName'))).dnsSettings.fqdn]"
+    },
+    "LABVM RDP Command": {
+      "type": "string",
+      "value": "[concat('mstsc /v:', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpAddressName'))).dnsSettings.fqdn)]"
+    },
+    "Check Point Management IP": {
+      "type": "string",
+      "value": "[variables('cpMgmtIp')]"
+    },
+    "Check Point Admin Username": {
+      "type": "string",
+      "value": "admin"
+    },
+    "Check Point Admin Password": {
+      "type": "string",
+      "value": "[variables('cpAdminPassword')]"
+    },
+    "Region": {
+      "type": "string",
+      "value": "[variables('location')]"
+    },
+    "trainerUserName": {
+      "type": "string",
+      "value": "[parameters('trainerUserName')]"
+    },
+    "trainerUserPassword": {
+      "type": "string",
+      "value": "[parameters('trainerUserPassword')]"
+    }
+  }
+}
