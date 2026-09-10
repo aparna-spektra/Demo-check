@@ -1,0 +1,600 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Lab 01 Check Point Firewall - fresh Marketplace deployment version. Windows jump VM remains based on the existing specialized image; the Check Point Management and Gateway VMs are deployed directly from the Check Point CloudGuard R82 Marketplace images and run unattended Gaia first-time configuration through customData.",
+    "comments": "ENVIRONMENT BRING-UP: The Windows jump VM still uses the existing specialized image. The Check Point Management and Gateway VMs are intentionally deployed from the Check Point CloudGuard R82 Marketplace images instead of the old specialized Gallery images. Their customData runs config_system during first boot, so they are NOT preconfigured at deployment. After a successful deployment, verify cpMgmt/cpGw licensing, SIC and SmartConsole before capturing new specialized Gallery images. PREREQUISITES: the underlying Check Point CloudGuard Marketplace offer must be available in the target subscription and its marketplace terms must be accepted. The fresh Marketplace version intentionally does not carry over the old specialized-image gateway object, SIC state, or baseline policy. After deployment, configure/verify the Management Server and Gateway in SmartConsole, establish SIC, install the baseline policy, test the lab, and only then capture the two new specialized images."
+  },
+  "parameters": {
+    "adminUsername": {
+      "type": "string"
+    },
+    "adminPassword": {
+      "type": "securestring"
+    },
+    "azureUserName": {
+      "type": "string"
+    },
+    "azurePassword": {
+      "type": "securestring"
+    },
+    "ODLID": {
+      "type": "String"
+    },
+    "DeploymentID": {
+      "type": "string"
+    },
+    "trainerUserName": {
+      "type": "string"
+    },
+    "trainerUserPassword": {
+      "type": "string"
+    },
+    "labImageId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the SPECIALIZED Compute Gallery image version for the lab jump VM (Windows Server 2022 + Check Point SmartConsole, pre-configured)."
+      }
+    },
+    "cpMarketplaceImageVersion": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Check Point CloudGuard R82 Marketplace image version. Use latest for a fresh Marketplace deployment, or pin a specific published version."
+      }
+    },
+    "cpVmAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Azure OS administrator password used only to provision the fresh Check Point Marketplace VMs. Use a password meeting Azure Linux VM password requirements."
+      }
+    }
+  },
+  "variables": {
+    "labVmPrivateIp": "10.0.0.5",
+    "cloudlabsCommon": "[concat(' -AzureUserName ', parameters('azureUserName'), ' -AzurePassword ', parameters('azurePassword'), ' -AzureTenantID ', variables('AzureTenantID'), ' -AzureSubscriptionID ', variables('AzureSubscriptionID'), ' -odlId ', parameters('ODLID'), ' -DeploymentID ', parameters('DeploymentID'))]",
+    "labSeedUser": "labuser",
+    "AzureSubscriptionID": "[subscription().subscriptionId]",
+    "AzureTenantID": "[subscription().tenantId]",
+    "bootstrapScriptUri": "https://experienceazure.blob.core.windows.net/templates/microland/DNS-Checkpoint-FW-Assesment-1/bootstrap-01.ps1",
+    "cpImageOffer": "check-point-cg-r82",
+    "cpMgmtImageSku": "mgmt-byol",
+    "cpGwImageSku": "sg-byol",
+    "cpAdminUser": "demouser",
+    "cpAdminPassword": "Chkp@12345",
+    "cpSicKey": "vpn123456",
+    "mgmtCustomData": "#!/bin/bash\n# Fresh Check Point Security Management - unattended Gaia first-time configuration.\n# This runs only because this VM is deployed from a fresh Marketplace image.\nconfig_system -s \"install_security_gw=false&install_security_managment=true&install_mgmt_primary=true&install_mgmt_secondary=false&mgmt_admin_radio=gui_admin&mgmt_admin_name=admin&mgmt_admin_passwd=Chkp@12345&mgmt_gui_clients_radio=any&ftw_sic_key=vpn123456&download_info=true&upload_info=true&reboot_if_required=true\"\n",
+    "gwCustomData": "#!/bin/bash\n# Fresh Check Point Security Gateway - unattended Gaia first-time configuration.\n# The SIC key matches the Management Server configuration.\nconfig_system -s \"install_security_gw=true&install_ppak=true&gateway_cluster_member=false&install_security_managment=false&ftw_sic_key=vpn123456&download_info=true&upload_info=true&reboot_if_required=true\"\n",
+    "cpMgmtIp": "10.0.0.10",
+    "addressPrefix": "10.0.0.0/16",
+    "mgmtSubnetName": "mgmt",
+    "mgmtSubnetPrefix": "10.0.0.0/24",
+    "externalSubnetName": "external",
+    "externalSubnetPrefix": "10.0.1.0/24",
+    "internalSubnetName": "internal",
+    "internalSubnetPrefix": "10.0.2.0/24",
+    "networkInterfaceName": "[concat(variables('vmName'), '-nic')]",
+    "networkSecurityGroupName": "[concat(variables('vmName'), '-nsg')]",
+    "publicIpAddressDNSName": "[concat('labvm', uniqueString(resourceGroup().id))]",
+    "publicIpAddressName": "[concat(variables('vmName'), '-pip')]",
+    "virtualMachineSize": "Standard_D2s_v3",
+    "virtualNetworkName": "labvNet",
+    "vmName": "[concat('labvm-', parameters('DeploymentID'))]",
+    "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets/', variables('virtualNetworkName'), variables('mgmtSubnetName'))]",
+    "externalSubnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets/', variables('virtualNetworkName'), variables('externalSubnetName'))]",
+    "internalSubnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets/', variables('virtualNetworkName'), variables('internalSubnetName'))]",
+    "cpMgmtVmName": "cp-mgmt",
+    "cpGwVmName": "cp-gw",
+    "cpVmSize": "Standard_D8s_v4",
+    "cpNsgName": "checkpoint-mgmt-nsg",
+    "cpMgmtPipName": "cp-mgmt-pip",
+    "cpGwExtPipName": "cp-gw-ext-pip",
+    "cpMgmtNicName": "cp-mgmt-nic",
+    "cpGwMgmtNicName": "cp-gw-mgmt-nic",
+    "cpGwExtNicName": "cp-gw-ext-nic",
+    "cpGwIntNicName": "cp-gw-int-nic",
+    "location": "[resourceGroup().location]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2017-04-01",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('mgmtSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('mgmtSubnetPrefix')]"
+            }
+          },
+          {
+            "name": "[variables('externalSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('externalSubnetPrefix')]"
+            }
+          },
+          {
+            "name": "[variables('internalSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('internalSubnetPrefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIpAddresses",
+      "apiVersion": "2017-08-01",
+      "name": "[variables('publicIpAddressName')]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIpAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[concat(variables('publicIpAddressDNSName'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIpAddresses",
+      "apiVersion": "2017-08-01",
+      "name": "[variables('cpMgmtPipName')]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIpAllocationMethod": "Static"
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIpAddresses",
+      "apiVersion": "2017-08-01",
+      "name": "[variables('cpGwExtPipName')]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIpAllocationMethod": "Static"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2017-06-01",
+      "name": "[variables('networkSecurityGroupName')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "default-allow-rdp",
+            "properties": {
+              "priority": 110,
+              "protocol": "TCP",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "3389"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2017-06-01",
+      "name": "[variables('cpNsgName')]",
+      "comments": "NSG for the Check Point Security Management server - allows SSH (22) and HTTPS (443) so the jump host can reach SmartConsole download + the Management REST API at 10.0.0.10/web_api.",
+      "location": "[variables('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Allow-Mgmt-SSH",
+            "properties": {
+              "priority": 1000,
+              "protocol": "TCP",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "10.0.0.0/24",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "22"
+            }
+          },
+          {
+            "name": "Allow-Mgmt-HTTPS",
+            "properties": {
+              "priority": 1010,
+              "protocol": "TCP",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "10.0.0.0/24",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "443"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2016-09-01",
+      "name": "[variables('networkInterfaceName')]",
+      "comments": "Windows jump host NIC - static 10.0.0.5 on the mgmt subnet (10.0.0.0/24) so the jump VM can reach the Check Point Management API at 10.0.0.10.",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/publicIpAddresses/', variables('publicIpAddressName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              },
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[variables('labVmPrivateIp')]",
+              "publicIpAddress": {
+                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('publicIpAddressName'))]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2016-09-01",
+      "name": "[variables('cpMgmtNicName')]",
+      "comments": "Check Point Management NIC - static 10.0.0.10 on the mgmt subnet, with a public IP for first-time configuration. The Management API answers on https://10.0.0.10/web_api.",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/publicIpAddresses/', variables('cpMgmtPipName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('cpNsgName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig-mgmt",
+            "properties": {
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              },
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[variables('cpMgmtIp')]",
+              "publicIpAddress": {
+                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('cpMgmtPipName'))]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('cpNsgName'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2016-09-01",
+      "name": "[variables('cpGwMgmtNicName')]",
+      "comments": "Security Gateway management-plane NIC on the mgmt subnet (used for SIC with the Management server).",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('cpNsgName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig-gw-mgmt",
+            "properties": {
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              },
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "10.0.0.20"
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('cpNsgName'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2016-09-01",
+      "name": "[variables('cpGwExtNicName')]",
+      "comments": "Security Gateway external (internet-facing) dataplane NIC - IP forwarding enabled.",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/publicIpAddresses/', variables('cpGwExtPipName'))]"
+      ],
+      "properties": {
+        "enableIPForwarding": true,
+        "ipConfigurations": [
+          {
+            "name": "ipconfig-gw-ext",
+            "properties": {
+              "subnet": {
+                "id": "[variables('externalSubnetRef')]"
+              },
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "10.0.1.4",
+              "publicIpAddress": {
+                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('cpGwExtPipName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2016-09-01",
+      "name": "[variables('cpGwIntNicName')]",
+      "comments": "Security Gateway internal (protected) dataplane NIC - IP forwarding enabled.",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+      ],
+      "properties": {
+        "enableIPForwarding": true,
+        "ipConfigurations": [
+          {
+            "name": "ipconfig-gw-int",
+            "properties": {
+              "subnet": {
+                "id": "[variables('internalSubnetRef')]"
+              },
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "10.0.2.4"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2019-07-01",
+      "name": "[variables('vmName')]",
+      "comments": "Windows Server 2022 jump VM (labvm-<DeploymentID>) built from a SPECIALIZED Compute Gallery image with Check Point SmartConsole pre-installed. A specialized image carries its own machine identity/local accounts, so this VM has NO osProfile - RDP uses the credentials baked into the image (see the deployment parameters file). The candidate RDPs in and drives SmartConsole / the Management API from here.",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfaceName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('virtualMachineSize')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "id": "[parameters('labImageId')]"
+          },
+          "osDisk": {
+            "createOption": "fromImage",
+            "name": "[concat(variables('vmName'), '-osdisk')]",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          },
+          "dataDisks": []
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2019-07-01",
+      "name": "[variables('cpMgmtVmName')]",
+      "comments": "Fresh Check Point CloudGuard Security Management VM deployed directly from the Marketplace R82 mgmt-byol image. First-time configuration is performed by customData; do not capture this VM until SmartConsole login and licensing/SIC have been verified.",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('cpMgmtNicName'))]"
+      ],
+      "plan": {
+        "name": "[variables('cpMgmtImageSku')]",
+        "publisher": "checkpoint",
+        "product": "[variables('cpImageOffer')]"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('cpVmSize')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "checkpoint",
+            "offer": "[variables('cpImageOffer')]",
+            "sku": "[variables('cpMgmtImageSku')]",
+            "version": "[parameters('cpMarketplaceImageVersion')]"
+          },
+          "osDisk": {
+            "createOption": "fromImage",
+            "name": "[concat(variables('cpMgmtVmName'), '-osdisk')]",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('cpMgmtNicName'))]"
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[variables('cpMgmtVmName')]",
+          "adminUsername": "[variables('cpAdminUser')]",
+          "adminPassword": "[parameters('cpVmAdminPassword')]",
+          "customData": "[base64(variables('mgmtCustomData'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2019-07-01",
+      "name": "[variables('cpGwVmName')]",
+      "comments": "Fresh Check Point CloudGuard Security Gateway VM deployed directly from the Marketplace R82 sg-byol image. First-time configuration is performed by customData. Gateway creation waits for the Management VM resource to complete. Do not capture this VM until SIC and SmartConsole connectivity have been verified.",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('cpGwMgmtNicName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', variables('cpGwExtNicName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', variables('cpGwIntNicName'))]",
+        "[concat('Microsoft.Compute/virtualMachines/', variables('cpMgmtVmName'))]"
+      ],
+      "plan": {
+        "name": "[variables('cpGwImageSku')]",
+        "publisher": "checkpoint",
+        "product": "[variables('cpImageOffer')]"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('cpVmSize')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "checkpoint",
+            "offer": "[variables('cpImageOffer')]",
+            "sku": "[variables('cpGwImageSku')]",
+            "version": "[parameters('cpMarketplaceImageVersion')]"
+          },
+          "osDisk": {
+            "createOption": "fromImage",
+            "name": "[concat(variables('cpGwVmName'), '-osdisk')]",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('cpGwMgmtNicName'))]",
+              "properties": {
+                "primary": true
+              }
+            },
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('cpGwExtNicName'))]",
+              "properties": {
+                "primary": false
+              }
+            },
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('cpGwIntNicName'))]",
+              "properties": {
+                "primary": false
+              }
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[variables('cpGwVmName')]",
+          "adminUsername": "[variables('cpAdminUser')]",
+          "adminPassword": "[parameters('cpVmAdminPassword')]",
+          "customData": "[base64(variables('gwCustomData'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('vmName'), '/', 'windowsExtension')]",
+      "apiVersion": "2019-07-01",
+      "location": "[variables('location')]",
+      "comments": "Custom Script Extension - runs bootstrap-01.ps1 on the Windows jump host: relaxes TLS, verifies the pre-installed SmartConsole, and writes C:\\LabFiles\\README.txt with the environment coordinates + six tasks. No install or gateway onboarding is done - all three VMs come from specialized, already-configured images. Every step is guarded so the CSE never hard-fails.",
+      "tags": {
+        "displayName": "VM Extension"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.10",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris": [
+            "[variables('bootstrapScriptUri')]"
+          ]
+        },
+        "protectedSettings": {
+          "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File microland/DNS-Checkpoint-FW-Assesment-1/bootstrap-01.ps1', variables('cloudlabsCommon'))]"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "Deployment ID": {
+      "type": "string",
+      "value": "[parameters('DeploymentID')]"
+    },
+    "LABVM Admin Username": {
+      "type": "string",
+      "value": "[parameters('adminUsername')]"
+    },
+    "LABVM Admin Password": {
+      "type": "string",
+      "value": "[parameters('adminPassword')]"
+    },
+    "LABVM DNS Name": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpAddressName'))).dnsSettings.fqdn]"
+    },
+    "LABVM RDP Command": {
+      "type": "string",
+      "value": "[concat('mstsc /v:', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpAddressName'))).dnsSettings.fqdn)]"
+    },
+    "Check Point Management IP": {
+      "type": "string",
+      "value": "[variables('cpMgmtIp')]"
+    },
+    "Check Point Admin Username": {
+      "type": "string",
+      "value": "admin"
+    },
+    "Check Point Admin Password": {
+      "type": "string",
+      "value": "[variables('cpAdminPassword')]"
+    },
+    "Region": {
+      "type": "string",
+      "value": "[variables('location')]"
+    },
+    "trainerUserName": {
+      "type": "string",
+      "value": "[parameters('trainerUserName')]"
+    },
+    "trainerUserPassword": {
+      "type": "string",
+      "value": "[parameters('trainerUserPassword')]"
+    }
+  }
+}
