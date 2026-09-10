@@ -367,7 +367,6 @@
           "vmSize": "[variables('virtualMachineSize')]"
         },
         "storageProfile": {
-          "imageReference": {},
           "osDisk": {
             "createOption": "fromImage",
             "name": "[concat(variables('vmName'), '-osdisk')]",
@@ -405,7 +404,6 @@
           "vmSize": "[variables('cpVmSize')]"
         },
         "storageProfile": {
-          "imageReference": {},
           "osDisk": {
             "createOption": "fromImage",
             "name": "[concat(variables('cpMgmtVmName'), '-osdisk')]",
@@ -444,7 +442,6 @@
           "vmSize": "[variables('cpVmSize')]"
         },
         "storageProfile": {
-          "imageReference": {},
           "osDisk": {
             "createOption": "fromImage",
             "name": "[concat(variables('cpGwVmName'), '-osdisk')]",
