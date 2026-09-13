@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "azureUserName": {
+      "value": "GET-AZUSER-UPN"
+    },
+    "azurePassword": {
+      "value": "GET-AZUSER-PASSWORD"
+    },
+    "ODLID": {
+      "value": "GET-ODL-ID"
+    },
+    "DeploymentID": {
+      "value": "GET-DEPLOYMENT-ID"
+    },
+    "adminUsername": {
+      "value": "demouser"
+    },
+    "adminPassword": {
+      "value": "Password.1!!"
+    },
+    "trainerUserName": {
+      "value": "instructor"
+    },
+    "trainerUserPassword": {
+      "value": "GEN-PASSWORD"
+    },
+    "labImageId": {
+      "value": "/subscriptions/04112d32-1666-4692-9c76-1600a0325bce/resourceGroups/cloudlabsxmicroland-mgmt-images/providers/Microsoft.Compute/galleries/checkpointmicroland/images/MicrosoftWindowsServer/versions/0.0.2"
+    },
+    "cpMgmtImageId": {
+      "value": "/subscriptions/04112d32-1666-4692-9c76-1600a0325bce/resourceGroups/cloudlabsxmicroland-mgmt-images/providers/Microsoft.Compute/galleries/checkpointmicroland/images/cp-mgmt-image/versions/0.0.2"
+    },
+    "cpGwImageId": {
+      "value": "/subscriptions/04112d32-1666-4692-9c76-1600a0325bce/resourceGroups/cloudlabsxmicroland-mgmt-images/providers/Microsoft.Compute/galleries/checkpointmicroland/images/cp-gw-image/versions/0.0.2"
+    }
+  }
+}
