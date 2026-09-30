@@ -2,8 +2,8 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "description": "Lab 01 (Check Point Firewall - Administration & Policy Management) - three VMs deployed from SPECIALIZED Compute Gallery images so the environment comes up already-configured: a Windows Server 2022 jump VM with Check Point SmartConsole (parameters('labImageId')), a Check Point CloudGuard Security Management server at 10.0.0.10 (parameters('cpMgmtImageId')) and a Check Point Security Gateway cp-gw at 10.0.0.20 (parameters('cpGwImageId')). The management admin (admin/Chkp@12345), Management API accept-from-all, the cp-gw object, SIC and the published baseline policy are all baked into the cp-mgmt image; SIC survives redeployment because the private IPs are static. The candidate RDPs to the jump VM and administers policy via SmartConsole / the Management REST API; validators run PowerShell on the jump VM and call the Management API at https://10.0.0.10/web_api.",
-    "comments": "ENVIRONMENT BRING-UP: All three VMs use SPECIALIZED images captured from a working, hand-configured environment, so NO first-time configuration runs at deploy time - the Check Point VMs therefore have NO osProfile and NO customData (re-running config_system would wipe the baked config). The 'plan' block remains on each Check Point VM because the images derive from marketplace CloudGuard images. Static private IPs (jump 10.0.0.5, mgmt 10.0.0.10, gw 10.0.0.20 + gw dataplane 10.0.1.4/10.0.2.4) and the cp-gw NIC order (mgmt primary, external, internal) are preserved to keep Gaia interface config and SIC valid. The jump VM Custom Script Extension runs bootstrap-01.ps1, which now only verifies SmartConsole and writes C:\\LabFiles\\README.txt (no install, no onboarding - the environment is pre-connected). PREREQUISITES: the deploying identity needs Reader on the gallery 'checkpointmicroland' (RG cloudlabsxmicroland-mgmt-images) or the images shared to the target subscription; marketplace terms for the underlying CloudGuard offer must be accepted; and the CloudGuard license (BYOL/eval) must be valid for the lab lifetime."
+    "description": "Fresh Check Point CloudGuard R82 capture environment for Microland. Deploys a Windows jump VM plus fresh Check Point Management and Security Gateway Marketplace VMs for configuration and subsequent Specialized image capture.",
+    "comments": "Use this template to build a fresh environment for image capture. The Windows jump VM uses the current Windows Server 2022 Marketplace offer windowsserver2022. Check Point VMs use Marketplace CloudGuard R82 BYOL images. Configure and validate the Check Point environment before capturing Management and Gateway as Specialized Compute Gallery images."
   },
   "parameters": {
     "adminUsername": {
@@ -58,7 +58,7 @@
     "networkSecurityGroupName": "[concat(variables('vmName'), '-nsg')]",
     "publicIpAddressDNSName": "[concat('labvm', uniqueString(resourceGroup().id))]",
     "publicIpAddressName": "[concat(variables('vmName'), '-pip')]",
-    "virtualMachineSize": "Standard_D2s_v3",
+    "virtualMachineSize": "Standard_D2as_v5",
     "virtualNetworkName": "labvNet",
     "vmName": "[concat('labvm-', parameters('DeploymentID'))]",
     "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets/', variables('virtualNetworkName'), variables('mgmtSubnetName'))]",
@@ -66,7 +66,7 @@
     "internalSubnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets/', variables('virtualNetworkName'), variables('internalSubnetName'))]",
     "cpMgmtVmName": "cp-mgmt",
     "cpGwVmName": "cp-gw",
-    "cpVmSize": "Standard_D8s_v4",
+    "cpVmSize": "Standard_D8s_v5",
     "cpNsgName": "checkpoint-mgmt-nsg",
     "cpMgmtPipName": "cp-mgmt-pip",
     "cpGwExtPipName": "cp-gw-ext-pip",
@@ -359,7 +359,7 @@
       "type": "Microsoft.Compute/virtualMachines",
       "apiVersion": "2019-07-01",
       "name": "[variables('vmName')]",
-      "comments": "Windows Server 2022 jump VM (labvm-<DeploymentID>) built from a SPECIALIZED Compute Gallery image with Check Point SmartConsole pre-installed. A specialized image carries its own machine identity/local accounts, so this VM has NO osProfile - RDP uses the credentials baked into the image (see the deployment parameters file). The candidate RDPs in and drives SmartConsole / the Management API from here.",
+      "comments": "Fresh Windows Server 2022 jump VM for the image-capture setup. Uses the current Windows Server 2022 Marketplace offer windowsserver2022.",
       "location": "[variables('location')]",
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfaceName'))]"
@@ -371,11 +371,16 @@
         "storageProfile": {
           "imageReference": {
             "publisher": "MicrosoftWindowsServer",
-            "offer": "WindowsServer",
-            "sku": "2022-datacenter-azure-edition"
+            "offer": "windowsserver2022",
+            "sku": "2022-datacenter-azure-edition",
+            "version": "latest"
           },
           "osDisk": {
-            "createOption": "fromImage"
+            "createOption": "fromImage",
+            "name": "[concat(variables('vmName'), '-osdisk')]",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
           },
           "dataDisks": []
         },
@@ -385,6 +390,11 @@
               "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
             }
           ]
+        },
+        "osProfile": {
+          "computerName": "CPJUMP",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
         }
       }
     },
@@ -392,7 +402,7 @@
       "type": "Microsoft.Compute/virtualMachines",
       "apiVersion": "2019-07-01",
       "name": "[variables('cpMgmtVmName')]",
-      "comments": "Check Point CloudGuard Security Management server, built from a SPECIALIZED Compute Gallery image (parameters('cpMgmtImageId')) that is ALREADY first-time-configured: management admin (admin/Chkp@12345), Management API accept-from-all, the cp-gw gateway object, SIC and the published baseline policy are all baked into the image disk. A specialized image carries its own identity/config, so there is NO osProfile and NO customData - re-running config_system would WIPE the baked config. The 'plan' block is still required because the image derives from a marketplace image. Static IP 10.0.0.10 is preserved so SIC (IP+cert bound) stays valid.",
+      "comments": "Fresh Check Point CloudGuard Management VM from Marketplace. Run first-time configuration, establish SIC, validate, then capture as SPECIALIZED.",
       "location": "[variables('location')]",
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', variables('cpMgmtNicName'))]"
@@ -410,10 +420,15 @@
           "imageReference": {
             "publisher": "checkpoint",
             "offer": "[variables('cpImageOffer')]",
-            "sku": "[variables('cpMgmtImageSku')]"
+            "sku": "[variables('cpMgmtImageSku')]",
+            "version": "latest"
           },
           "osDisk": {
-            "createOption": "fromImage"
+            "createOption": "fromImage",
+            "name": "[concat(variables('cpMgmtVmName'), '-osdisk')]",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
           }
         },
         "networkProfile": {
@@ -422,6 +437,12 @@
               "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('cpMgmtNicName'))]"
             }
           ]
+        },
+        "osProfile": {
+          "computerName": "CPMGMT",
+          "adminUsername": "admin",
+          "adminPassword": "[parameters('cpAdminPassword')]",
+          "customData": "[base64(variables('mgmtCustomData'))]"
         }
       }
     },
@@ -429,7 +450,7 @@
       "type": "Microsoft.Compute/virtualMachines",
       "apiVersion": "2019-07-01",
       "name": "[variables('cpGwVmName')]",
-      "comments": "Check Point CloudGuard Security Gateway, built from a SPECIALIZED Compute Gallery image (parameters('cpGwImageId')) that is ALREADY first-time-configured with SIC established to cp-mgmt. NO osProfile and NO customData - re-running config_system would reset the gateway and break SIC. The 'plan' block is still required (image derives from a marketplace image). Three NICs in this exact order - mgmt/SIC (primary, 10.0.0.20), external dataplane (10.0.1.4), internal dataplane (10.0.2.4) - must match the order at capture time so Gaia's saved eth0/eth1/eth2 config lines up. Static IPs preserved so SIC stays valid.",
+      "comments": "Fresh Check Point CloudGuard Security Gateway VM from Marketplace. Run first-time configuration, establish SIC, validate, then capture as SPECIALIZED.",
       "location": "[variables('location')]",
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', variables('cpGwMgmtNicName'))]",
@@ -449,10 +470,15 @@
           "imageReference": {
             "publisher": "checkpoint",
             "offer": "[variables('cpImageOffer')]",
-            "sku": "[variables('cpGwImageSku')]"
+            "sku": "[variables('cpGwImageSku')]",
+            "version": "latest"
           },
           "osDisk": {
-            "createOption": "fromImage"
+            "createOption": "fromImage",
+            "name": "[concat(variables('cpGwVmName'), '-osdisk')]",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
           }
         },
         "networkProfile": {
@@ -476,33 +502,12 @@
               }
             }
           ]
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat(variables('vmName'), '/', 'windowsExtension')]",
-      "apiVersion": "2019-07-01",
-      "location": "[variables('location')]",
-      "comments": "Custom Script Extension - runs bootstrap-01.ps1 on the Windows jump host: relaxes TLS, verifies the pre-installed SmartConsole, and writes C:\\LabFiles\\README.txt with the environment coordinates + six tasks. No install or gateway onboarding is done - all three VMs come from specialized, already-configured images. Every step is guarded so the CSE never hard-fails.",
-      "tags": {
-        "displayName": "VM Extension"
-      },
-      "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
-      ],
-      "properties": {
-        "publisher": "Microsoft.Compute",
-        "type": "CustomScriptExtension",
-        "typeHandlerVersion": "1.10",
-        "autoUpgradeMinorVersion": true,
-        "settings": {
-          "fileUris": [
-            "[variables('bootstrapScriptUri')]"
-          ]
         },
-        "protectedSettings": {
-          "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File microland/DNS-Checkpoint-FW-Assesment-1/bootstrap-01.ps1', variables('cloudlabsCommon'))]"
+        "osProfile": {
+          "computerName": "CPGW",
+          "adminUsername": "admin",
+          "adminPassword": "[parameters('cpAdminPassword')]",
+          "customData": "[base64(variables('gwCustomData'))]"
         }
       }
     }
